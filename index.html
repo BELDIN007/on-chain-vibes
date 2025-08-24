@@ -80,7 +80,7 @@
     <!-- Header section with dApp title and wallet connection -->
     <header class="w-full max-w-2xl flex justify-between items-center py-4 border-b border-subtle-gray mb-6">
         <h1 class="text-3xl font-bold">On-Chain Vibes ✨</h1>
-        <div id="wallet-info">
+        <div id="wallet-info" class="flex items-center">
             <!-- Button to connect wallet, initially visible -->
             <button id="connect-wallet-btn" class="bg-accent-amber text-bg-dark px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-accent-amber">
                 Connect Wallet
@@ -120,6 +120,29 @@
         <!-- Section for displaying all posted vibes -->
         <section class="bg-card-dark p-6 rounded-xl shadow-lg">
             <h2 class="text-2xl font-semibold mb-4">The Vibes Stream</h2>
+            <!-- Filter/Search Input and Button -->
+            <div class="flex gap-2 mb-4">
+                <input
+                    type="text"
+                    id="filter-input"
+                    placeholder="Filter by address or text..."
+                    class="flex-grow p-2 bg-bg-dark text-text-light border border-subtle-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-amber"
+                    aria-label="Filter vibes by address or text"
+                >
+                <button
+                    id="apply-filter-btn"
+                    class="bg-subtle-gray text-text-light px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-subtle-gray"
+                >
+                    Filter
+                </button>
+                <button
+                    id="clear-filter-btn"
+                    class="bg-subtle-gray text-text-light px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-subtle-gray"
+                >
+                    Clear
+                </button>
+            </div>
+
             <!-- Container for dynamically loaded vibe cards -->
             <div id="vibes-container" class="space-y-4 max-h-96 overflow-y-auto">
                 <!-- Loading/initial message -->
