@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>On-Chain Vibes</title>
+    <title>Vibez</title>
     <!-- Tailwind CSS CDN for quick styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Ethers.js library for Web3 interactions -->
@@ -11,6 +11,7 @@
     <script>
         // Tailwind CSS configuration to extend default theme
         tailwind.config = {
+            darkMode: 'class', // Enable dark mode based on the 'dark' class on the HTML element
             theme: {
                 extend: {
                     fontFamily: {
@@ -19,11 +20,19 @@
                     },
                     colors: {
                         // Custom color palette for the dApp
+                        // Dark Mode Colors (default as it was)
                         'bg-dark': '#0A0A0A', // Deep black for background
                         'card-dark': '#1A1A1A', // Slightly lighter black for cards
                         'text-light': '#F0F0F0', // Off-white for primary text
                         'accent-amber': '#FFC107', // Bright amber for interactive elements
                         'subtle-gray': '#757575', // Dark gray for secondary text and borders
+
+                        // Light Mode Colors (new additions)
+                        'light-bg': '#F8F8F8', // Very light gray for light mode background
+                        'light-card': '#FFFFFF', // White for light mode cards
+                        'light-text': '#333333', // Dark gray for light mode text
+                        'light-subtle-gray': '#A0A0A0', // Medium gray for light mode secondary text and borders
+                        'light-input-bg': '#E0E0E0', // Light gray for input backgrounds
                     }
                 }
             }
@@ -41,17 +50,27 @@
             width: 8px;
         }
         .overflow-y-auto::-webkit-scrollbar-track {
-            background: #2D2D2D;
+            background: #e0e0e0; /* Light mode track */
             border-radius: 10px;
+        }
+        .dark .overflow-y-auto::-webkit-scrollbar-track {
+            background: #2D2D2D; /* Dark mode track */
         }
         .overflow-y-auto::-webkit-scrollbar-thumb {
-            background: #4A4A4A;
+            background: #a0a0a0; /* Light mode thumb */
             border-radius: 10px;
         }
+        .dark .overflow-y-auto::-webkit-scrollbar-thumb {
+            background: #4A4A4A; /* Dark mode thumb */
+        }
         .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-            background: #5A5A5A;
+            background: #757575; /* Light mode hover */
             cursor: pointer;
         }
+        .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+            background: #5A5A5A; /* Dark mode hover */
+        }
+
 
         /* Hover effect for vibe cards */
         .vibe-card {
@@ -60,8 +79,11 @@
         }
         .vibe-card:hover {
             transform: translateY(-2px); /* Slightly lift the card */
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); /* Add more pronounced shadow */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Add more pronounced shadow for light mode */
             border-color: #FFC107; /* Highlight border with accent color */
+        }
+        .dark .vibe-card:hover {
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); /* Darker shadow for dark mode */
         }
 
         /* Responsive adjustments for smaller screens */
@@ -84,41 +106,50 @@
         }
     </style>
 </head>
-<body class="bg-bg-dark text-text-light min-h-screen flex flex-col items-center p-4">
+<body class="bg-light-bg text-light-text min-h-screen flex flex-col items-center p-4 dark:bg-bg-dark dark:text-text-light">
 
     <!-- Header section with dApp title and wallet connection -->
-    <header class="w-full max-w-2xl flex justify-between items-center py-4 border-b border-subtle-gray mb-6">
+    <header class="w-full max-w-2xl flex justify-between items-center py-4 border-b border-light-subtle-gray dark:border-subtle-gray mb-6">
         <h1 class="text-3xl font-bold">On-Chain Vibes ✨</h1>
-        <div id="wallet-info" class="flex items-center">
-            <!-- Button to connect wallet, initially visible -->
-            <button id="connect-wallet-btn" class="bg-accent-amber text-bg-dark px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-accent-amber">
-                Connect Wallet
+        <div class="flex items-center gap-4">
+            <!-- Theme Toggle Button -->
+            <button id="theme-toggle-btn"
+                    class="p-2 rounded-full bg-light-input-bg text-light-text dark:bg-subtle-gray dark:text-text-light hover:bg-light-subtle-gray dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-amber transition-colors">
+                <!-- Icon will be set by JS -->
             </button>
-            <!-- Placeholder for network status -->
-            <span id="network-status" class="text-sm text-subtle-gray ml-2 hidden"></span>
+
+            <div id="wallet-info" class="flex items-center">
+                <!-- Button to connect wallet, initially visible -->
+                <button id="connect-wallet-btn" class="bg-accent-amber text-bg-dark px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-accent-amber">
+                    Connect Wallet
+                </button>
+                <!-- Placeholder for network status -->
+                <span id="network-status" class="text-sm text-light-subtle-gray dark:text-subtle-gray ml-2 hidden"></span>
+            </div>
         </div>
     </header>
 
     <!-- Main content area -->
     <main class="w-full max-w-2xl flex flex-col gap-6">
+
         <!-- Section for posting new vibe messages -->
-        <section class="bg-card-dark p-6 rounded-xl shadow-lg">
+        <section class="bg-light-card dark:bg-card-dark p-6 rounded-xl shadow-lg">
             <h2 class="text-2xl font-semibold mb-4">Share Your Vibe</h2>
             <!-- Textarea for user to type their message -->
             <textarea
                 id="vibe-message"
                 placeholder="What's on your mind? Max 140 characters..."
                 maxlength="140"
-                class="w-full h-24 p-3 bg-bg-dark text-text-light border border-subtle-gray rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-amber mb-3"
+                class="w-full h-24 p-3 bg-light-input-bg dark:bg-bg-dark text-light-text dark:text-text-light border border-light-subtle-gray dark:border-subtle-gray rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-amber mb-3"
                 aria-label="Vibe message input"
             ></textarea>
             <div class="flex justify-between items-center">
                 <!-- Character count display -->
-                <span id="char-count" class="text-sm text-subtle-gray">0/140</span>
+                <span id="char-count" class="text-sm text-light-subtle-gray dark:text-subtle-gray">0/140</span>
                 <!-- Button to post the vibe, initially disabled -->
                 <button
                     id="post-vibe-btn"
-                    class="bg-accent-amber text-bg-dark px-5 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-yellow-600 disabled:bg-subtle-gray disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent-amber"
+                    class="bg-accent-amber text-bg-dark px-5 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-yellow-600 disabled:bg-light-subtle-gray dark:disabled:bg-subtle-gray disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent-amber"
                     disabled
                 >
                     Post Vibe
@@ -127,7 +158,7 @@
         </section>
 
         <!-- Section for displaying all posted vibes -->
-        <section class="bg-card-dark p-6 rounded-xl shadow-lg">
+        <section class="bg-light-card dark:bg-card-dark p-6 rounded-xl shadow-lg">
             <h2 class="text-2xl font-semibold mb-4">The Vibes Stream</h2>
             <!-- Filter/Search Input and Buttons -->
             <div class="flex flex-col sm:flex-row gap-2 mb-4">
@@ -135,13 +166,13 @@
                     type="text"
                     id="filter-input"
                     placeholder="Filter by address or text..."
-                    class="flex-grow p-2 bg-bg-dark text-text-light border border-subtle-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-amber"
+                    class="flex-grow p-2 bg-light-input-bg dark:bg-bg-dark text-light-text dark:text-text-light border border-light-subtle-gray dark:border-subtle-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-amber"
                     aria-label="Filter vibes by address or text"
                 >
                 <div class="flex gap-2 mt-2 sm:mt-0 flex-col-mobile sm:flex-row">
                     <button
                         id="apply-filter-btn"
-                        class="bg-subtle-gray text-text-light px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-subtle-gray"
+                        class="bg-light-subtle-gray text-light-text dark:bg-subtle-gray dark:text-text-light px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-gray-400 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-amber"
                     >
                         Filter
                     </button>
@@ -154,7 +185,7 @@
                     </button>
                     <button
                         id="clear-filter-btn"
-                        class="bg-subtle-gray text-text-light px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-subtle-gray"
+                        class="bg-light-subtle-gray text-light-text dark:bg-subtle-gray dark:text-text-light px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-gray-400 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-amber"
                     >
                         Clear
                     </button>
@@ -164,15 +195,12 @@
             <!-- Container for dynamically loaded vibe cards -->
             <div id="vibes-container" class="space-y-4 max-h-96 overflow-y-auto">
                 <!-- Loading/initial message -->
-                <p class="text-center text-subtle-gray py-4" id="loading-message">
+                <p class="text-center text-light-subtle-gray dark:text-subtle-gray py-4" id="loading-message">
                     Connect your wallet to see the vibes!
                 </p>
             </div>
-            <!-- No Load More button here -->
         </section>
     </main>
-
-    <!-- No Tip Modal here -->
 
     <!-- Link to your JavaScript file -->
     <script src="app.js"></script>

@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // PASTE YOUR *ORIGINAL* SEPOLIA DEPLOYED CONTRACT ABI HERE
     const CONTRACT_ABI = [
         // Your ORIGINAL ABI goes here. It should only have postVibe and getAllVibes.
-        // It will be shorter than the ABI with pagination and tipping.
         {
             "inputs": [
                 { "internalType": "string", "name": "_message", "type": "string" }
@@ -44,46 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ],
             "name": "NewVibe",
             "type": "event"
-        },
-        {
-            "inputs": [],
-            "name": "allVibes",
-            "outputs": [
-                {
-                    "components": [
-                        { "internalType": "string", "name": "message", "type": "string" },
-                        { "internalType": "uint256", "name": "timestamp", "type": "uint256" },
-                        { "internalType": "address", "name": "poster", "type": "address" }
-                    ],
-                    "internalType": "struct OnChainVibes.Vibe[]",
-                    "name": "",
-                    "type": "tuple[]"
-                }
-            ],
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "inputs": [
-                { "internalType": "uint256", "name": "", "type": "uint256" }
-            ],
-            "name": "allVibes",
-            "outputs": [
-                { "internalType": "string", "name": "message", "type": "string" },
-                { "internalType": "uint256", "name": "timestamp", "type": "uint256" },
-                { "internalType": "address", "name": "poster", "type": "address" }
-            ],
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "inputs": [],
-            "name": "getTotalVibes",
-            "outputs": [
-                { "internalType": "uint256", "name": "", "type": "uint256" }
-            ],
-            "stateMutability": "view",
-            "type": "function"
         }
     ]; // <-- END OF ORIGINAL ABI ARRAY
 
@@ -108,6 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const applyFilterBtn = document.getElementById('apply-filter-btn');
     const clearFilterBtn = document.getElementById('clear-filter-btn');
     const myVibesBtn = document.getElementById('my-vibes-btn');
+
+    // Theme toggle element
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+
 
     // --- Helper Functions ---
 
@@ -150,17 +113,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * @dev Resolves an Ethereum address to an ENS name if available, otherwise returns a shortened address.
+     * NOTE: ENS resolution is often not supported on testnets by default RPCs,
+     * so for Sepolia, we will simply return the shortened address to prevent errors.
      * @param {string} address The Ethereum address.
-     * @returns {Promise<string>} The ENS name or shortened address.
+     * @returns {Promise<string>} The shortened address (ENS lookup bypassed for Sepolia).
      */
     async function resolveEnsName(address) {
         if (!provider || !address) return shortenAddress(address);
-        try {
-            const ensName = await provider.lookupAddress(address);
-            return ensName || shortenAddress(address);
-        } catch (error) {
-            console.warn("Failed to resolve ENS name for", address, error);
-            return shortenAddress(address);
+        // Temporarily disable ENS lookup for Sepolia to prevent "network does not support ENS" errors.
+        return shortenAddress(address);
+    }
+
+    // --- Theme Management Functions ---
+
+    /**
+     * @dev Initializes the theme based on localStorage or system preference.
+     */
+    function initializeTheme() {
+        const storedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        if (storedTheme === 'dark' || (!storedTheme && prefersDark)) {
+            document.documentElement.classList.add('dark');
+            themeToggleBtn.innerHTML = '☀️'; // Sun icon for dark mode (click to switch to light)
+            themeToggleBtn.setAttribute('aria-label', 'Switch to light mode');
+        } else {
+            document.documentElement.classList.remove('dark');
+            themeToggleBtn.innerHTML = '🌙'; // Moon icon for light mode (click to switch to dark)
+            themeToggleBtn.setAttribute('aria-label', 'Switch to dark mode');
+        }
+    }
+
+    /**
+     * @dev Toggles between dark and light themes.
+     */
+    function toggleTheme() {
+        if (document.documentElement.classList.contains('dark')) {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+            themeToggleBtn.innerHTML = '🌙';
+            themeToggleBtn.setAttribute('aria-label', 'Switch to dark mode');
+            showUserMessage("Switched to light mode", 'info');
+        } else {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+            themeToggleBtn.innerHTML = '☀️';
+            themeToggleBtn.setAttribute('aria-label', 'Switch to light mode');
+            showUserMessage("Switched to dark mode", 'info');
         }
     }
 
@@ -354,18 +353,18 @@ document.addEventListener('DOMContentLoaded', () => {
             // Reversing the array to show the latest vibes at the top
             displayedVibes.reverse().forEach(async vibe => {
                 const vibeCard = document.createElement('div');
-                vibeCard.className = 'vibe-card bg-bg-dark p-4 rounded-lg border border-subtle-gray shadow-sm';
+                vibeCard.className = 'vibe-card bg-light-card dark:bg-card-dark p-4 rounded-lg border border-light-subtle-gray dark:border-subtle-gray shadow-sm';
 
                 const message = vibe.message;
                 const timestamp = vibe.timestamp.toNumber();
                 const poster = vibe.poster;
 
-                const resolvedPoster = await resolveEnsName(poster); // Resolve ENS name
+                const resolvedPoster = await resolveEnsName(poster); // Will return shortened address on Sepolia
                 const formattedDate = new Date(timestamp * 1000).toLocaleString();
 
                 vibeCard.innerHTML = `
-                    <p class="text-text-light text-lg mb-2 break-words">${message}</p>
-                    <div class="flex justify-between text-sm text-subtle-gray">
+                    <p class="text-light-text dark:text-text-light text-lg mb-2 break-words">${message}</p>
+                    <div class="flex justify-between text-sm text-light-subtle-gray dark:text-subtle-gray">
                         <span>By: <span class="font-mono text-accent-amber">${resolvedPoster}</span></span>
                         <span>${formattedDate}</span>
                     </div>
@@ -414,9 +413,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    themeToggleBtn.addEventListener('click', toggleTheme);
+
 
     // --- Initial Load Logic ---
     async function initializeDApp() {
+        initializeTheme(); // Set theme on initial load
+
         if (typeof window.ethereum !== 'undefined' && window.ethereum.selectedAddress) {
             await connectWallet();
         } else {
