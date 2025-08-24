@@ -1,11 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log('On-Chain Vibes dApp frontend loaded.');
 
-    // --- Configuration (UPDATE THESE AFTER DEPLOYING YOUR CONTRACT TO SEPOLIA) ---
-    // PASTE YOUR SEPOLIA DEPLOYED CONTRACT ADDRESS HERE
-    const CONTRACT_ADDRESS = "0xdf8DcBBD19C955bAe4c6E9001BfF3ECFf8B85a4E";
-    // PASTE YOUR SEPOLIA DEPLOYED CONTRACT ABI HERE
+    // --- Configuration (UPDATE THESE WITH YOUR *ORIGINAL* CONTRACT DETAILS) ---
+    // PASTE YOUR *ORIGINAL* SEPOLIA DEPLOYED CONTRACT ADDRESS HERE
+    const CONTRACT_ADDRESS = "0x4a7e0a1b38527af1dD6C679a3663A6D23F82Fd22"; // REPLACE WITH YOUR ORIGINAL CONTRACT ADDRESS
+    // PASTE YOUR *ORIGINAL* SEPOLIA DEPLOYED CONTRACT ABI HERE
     const CONTRACT_ABI = [
+        // Your ORIGINAL ABI goes here. It should only have postVibe and getAllVibes.
+        // It will be shorter than the ABI with pagination and tipping.
         {
             "inputs": [
                 { "internalType": "string", "name": "_message", "type": "string" }
@@ -83,13 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
             "stateMutability": "view",
             "type": "function"
         }
-    ];
+    ]; // <-- END OF ORIGINAL ABI ARRAY
+
 
     // --- Global Variables ---
     let signer = null;
     let provider = null;
     let contract = null;
-    let userAddress = null;
+    let userAddress = null; // Connected wallet address
 
     // --- DOM Elements ---
     const connectWalletBtn = document.getElementById('connect-wallet-btn');
@@ -100,11 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingMessage = document.getElementById('loading-message');
     const networkStatusSpan = document.getElementById('network-status');
 
-    // New filter elements
+    // Filter elements
     const filterInput = document.getElementById('filter-input');
     const applyFilterBtn = document.getElementById('apply-filter-btn');
     const clearFilterBtn = document.getElementById('clear-filter-btn');
-
+    const myVibesBtn = document.getElementById('my-vibes-btn');
 
     // --- Helper Functions ---
 
@@ -145,6 +148,23 @@ document.addEventListener('DOMContentLoaded', () => {
         networkStatusSpan.classList.remove('hidden');
     }
 
+    /**
+     * @dev Resolves an Ethereum address to an ENS name if available, otherwise returns a shortened address.
+     * @param {string} address The Ethereum address.
+     * @returns {Promise<string>} The ENS name or shortened address.
+     */
+    async function resolveEnsName(address) {
+        if (!provider || !address) return shortenAddress(address);
+        try {
+            const ensName = await provider.lookupAddress(address);
+            return ensName || shortenAddress(address);
+        } catch (error) {
+            console.warn("Failed to resolve ENS name for", address, error);
+            return shortenAddress(address);
+        }
+    }
+
+
     // --- Web3 Interaction Functions ---
 
     /**
@@ -153,22 +173,20 @@ document.addEventListener('DOMContentLoaded', () => {
     async function connectWallet() {
         if (typeof window.ethereum !== 'undefined') {
             try {
-                // Request accounts from the wallet (triggers MetaMask popup)
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 userAddress = accounts[0];
 
-                // Initialize provider and signer
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 signer = provider.getSigner();
 
-                // Get current network and check if it's Sepolia
                 const network = await provider.getNetwork();
                 const expectedChainId = 11155111; // Sepolia Chain ID
                 if (network.chainId !== expectedChainId) {
                     showUserMessage(`Please switch your MetaMask to the Sepolia network. Current: ${network.name} (ChainID: ${network.chainId})`, 'error');
                     updateNetworkStatus(`Wrong Network: ${network.name}`, 'text-red-400');
-                    postVibeBtn.disabled = true; // Disable post button if on wrong network
-                    return; // Stop execution if on wrong network
+                    postVibeBtn.disabled = true;
+                    myVibesBtn.disabled = true;
+                    return;
                 }
 
                 // Initialize the contract instance with the signer for transactions
@@ -185,30 +203,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="text-sm font-semibold text-text-light">${shortenAddress(userAddress)}</span>
                     </div>
                 `;
-                connectWalletBtn.style.display = 'none'; // Hide connect button
+                connectWalletBtn.style.display = 'none';
 
-                // Update network status to green
                 updateNetworkStatus(`${network.name}`, 'text-green-400');
 
-                // Enable post vibe button if message is not empty and wallet is connected
                 postVibeBtn.disabled = vibeMessageTextarea.value.length === 0;
+                myVibesBtn.disabled = false; // Enable "My Vibes" button when connected
 
                 showUserMessage("Wallet connected!", 'success');
-                fetchVibes(); // Fetch and display vibes after successful connection
+                fetchVibes(); // Fetch and display all vibes after successful connection
 
-                // Add event listener for account changes in MetaMask
                 window.ethereum.on('accountsChanged', (newAccounts) => {
                     if (newAccounts.length === 0) {
                         showUserMessage("Wallet disconnected. Please reconnect.", 'info');
-                        location.reload(); // Simple reload for now, or more complex state reset
+                        location.reload();
                     } else {
                         userAddress = newAccounts[0];
                         showUserMessage("Account changed. Updating...", 'info');
-                        connectWallet(); // Re-initialize with new account
+                        connectWallet();
                     }
                 });
 
-                // Add event listener for network changes
                 window.ethereum.on('chainChanged', (chainId) => {
                     const newChainId = parseInt(chainId, 16);
                     if (newChainId === expectedChainId) {
@@ -216,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                          showUserMessage(`Switched to unsupported network (ChainID: ${newChainId}). Please switch to Sepolia. Reloading...`, 'error');
                     }
-                    location.reload(); // Reload to ensure correct contract instance and network
+                    location.reload();
                 });
 
             } catch (error) {
@@ -227,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     showUserMessage("Failed to connect wallet. Please try again.", 'error');
                 }
                 updateNetworkStatus("Disconnected", 'text-red-400');
+                myVibesBtn.disabled = true;
             }
         } else {
             showUserMessage("MetaMask or another Web3 wallet is not detected. Please install one.", 'info');
@@ -237,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </a>
             `;
             updateNetworkStatus("Wallet not detected", 'text-red-400');
+            myVibesBtn.disabled = true;
         }
     }
 
@@ -282,9 +299,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * @dev Fetches all vibe messages from the blockchain and dynamically displays them in the UI.
-     * @param {string} [filterTerm] Optional term to filter vibes by (address or text).
+     * @param {string} [filterTerm=''] Optional term to filter vibes by (address or text).
+     * @param {'all' | 'myVibes'} [filterType='all'] Specifies if filtering by current user's vibes.
      */
-    async function fetchVibes(filterTerm = '') {
+    async function fetchVibes(filterTerm = '', filterType = 'all') {
         if (!contract) {
             loadingMessage.textContent = "Connect your wallet to load vibes.";
             loadingMessage.style.display = 'block';
@@ -293,49 +311,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
         loadingMessage.textContent = "Loading vibes...";
         loadingMessage.style.display = 'block';
-        vibesContainer.innerHTML = '';
+        vibesContainer.innerHTML = ''; // Clear previous vibes
 
         try {
             const allVibes = await contract.getAllVibes();
-            let filteredVibes = allVibes;
+            let displayedVibes = allVibes;
 
-            // Apply filter if a filter term is provided
-            if (filterTerm.trim() !== '') {
+            // Apply filter based on filterType
+            if (filterType === 'myVibes') {
+                if (!userAddress) {
+                    showUserMessage("Please connect your wallet to view your vibes.", 'info');
+                    loadingMessage.textContent = "Please connect your wallet to view your vibes.";
+                    return;
+                }
+                displayedVibes = allVibes.filter(vibe => vibe.poster.toLowerCase() === userAddress.toLowerCase());
+                filterInput.value = ''; // Clear general filter input when "My Vibes" is active
+            } else if (filterTerm.trim() !== '') { // General text/address filter
                 const lowerCaseFilter = filterTerm.trim().toLowerCase();
-                filteredVibes = allVibes.filter(vibe => {
-                    // Filter by poster address or message content
+                displayedVibes = allVibes.filter(vibe => {
                     const vibeMessage = vibe.message.toLowerCase();
                     const vibePoster = vibe.poster.toLowerCase();
-
                     return vibeMessage.includes(lowerCaseFilter) ||
                            vibePoster.includes(lowerCaseFilter);
                 });
             }
 
-            if (filteredVibes.length === 0) {
-                loadingMessage.textContent = filterTerm ? "No vibes found matching your filter." : "No vibes posted yet. Be the first to share!";
+            if (displayedVibes.length === 0) {
+                if (filterType === 'myVibes') {
+                    loadingMessage.textContent = "You haven't posted any vibes yet. Be the first!";
+                } else if (filterTerm) {
+                    loadingMessage.textContent = "No vibes found matching your filter.";
+                } else {
+                    loadingMessage.textContent = "No vibes posted yet. Be the first to share!";
+                }
                 loadingMessage.style.display = 'block';
                 return;
             }
 
             loadingMessage.style.display = 'none';
 
-            // Create and append a card for each filtered vibe
-            filteredVibes.reverse().forEach(vibe => {
+            // Create and append a card for each displayed vibe
+            // Reversing the array to show the latest vibes at the top
+            displayedVibes.reverse().forEach(async vibe => {
                 const vibeCard = document.createElement('div');
-                vibeCard.className = 'vibe-card bg-bg-dark p-4 rounded-lg border border-subtle-gray shadow-sm cursor-pointer';
+                vibeCard.className = 'vibe-card bg-bg-dark p-4 rounded-lg border border-subtle-gray shadow-sm';
 
                 const message = vibe.message;
                 const timestamp = vibe.timestamp.toNumber();
                 const poster = vibe.poster;
 
-                const senderAddress = shortenAddress(poster);
+                const resolvedPoster = await resolveEnsName(poster); // Resolve ENS name
                 const formattedDate = new Date(timestamp * 1000).toLocaleString();
 
                 vibeCard.innerHTML = `
                     <p class="text-text-light text-lg mb-2 break-words">${message}</p>
                     <div class="flex justify-between text-sm text-subtle-gray">
-                        <span>By: <span class="font-mono">${senderAddress}</span></span>
+                        <span>By: <span class="font-mono text-accent-amber">${resolvedPoster}</span></span>
                         <span>${formattedDate}</span>
                     </div>
                 `;
@@ -359,20 +390,27 @@ document.addEventListener('DOMContentLoaded', () => {
         postVibeBtn.disabled = charCount === 0 || !signer;
     });
 
-    // Event listeners for filter functionality
     applyFilterBtn.addEventListener('click', () => {
         const filterTerm = filterInput.value;
-        fetchVibes(filterTerm);
+        fetchVibes(filterTerm, 'all');
     });
 
     clearFilterBtn.addEventListener('click', () => {
-        filterInput.value = ''; // Clear the input field
-        fetchVibes(); // Refetch all vibes without any filter
+        filterInput.value = '';
+        fetchVibes('', 'all');
+    });
+
+    myVibesBtn.addEventListener('click', () => {
+        if (userAddress) {
+            fetchVibes('', 'myVibes');
+        } else {
+            showUserMessage("Please connect your wallet to view your vibes.", 'info');
+        }
     });
 
     filterInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
-            applyFilterBtn.click(); // Trigger filter on Enter key press
+            applyFilterBtn.click();
         }
     });
 
@@ -385,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingMessage.textContent = "Please connect your wallet to view and post vibes.";
             loadingMessage.style.display = 'block';
             updateNetworkStatus("Not Connected", 'text-red-400');
+            myVibesBtn.disabled = true;
         }
     }
 

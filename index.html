@@ -6,7 +6,7 @@
     <title>On-Chain Vibes</title>
     <!-- Tailwind CSS CDN for quick styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Ethers.js library for Web3 interactions (Updated CDN) -->
+    <!-- Ethers.js library for Web3 interactions -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <script>
         // Tailwind CSS configuration to extend default theme
@@ -50,27 +50,36 @@
         }
         .overflow-y-auto::-webkit-scrollbar-thumb:hover {
             background: #5A5A5A;
-            cursor: pointer; /* Indicate it's interactive, even if just visual */
+            cursor: pointer;
         }
 
         /* Hover effect for vibe cards */
+        .vibe-card {
+            transform: translateY(0); /* Ensure no initial transform */
+            transition: all 0.2s ease-in-out; /* Smooth transition for all changes */
+        }
         .vibe-card:hover {
             transform: translateY(-2px); /* Slightly lift the card */
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); /* Add more pronounced shadow */
-            border-color: var(--accent-amber); /* Highlight border with accent color */
-            transition: all 0.2s ease-in-out; /* Smooth transition for all changes */
+            border-color: #FFC107; /* Highlight border with accent color */
         }
 
         /* Responsive adjustments for smaller screens */
         @media (max-width: 640px) {
             body {
-                font-size: 14px; /* Slightly smaller font on mobile */
+                font-size: 14px;
             }
             .text-3xl {
-                font-size: 2rem; /* Adjust header size */
+                font-size: 2rem;
             }
             .text-2xl {
-                font-size: 1.5rem; /* Adjust section title size */
+                font-size: 1.5rem;
+            }
+            .flex-col-mobile { /* Custom class for filter buttons on mobile */
+                flex-direction: column;
+            }
+            .flex-col-mobile > button {
+                width: 100%; /* Full width for buttons on mobile */
             }
         }
     </style>
@@ -120,8 +129,8 @@
         <!-- Section for displaying all posted vibes -->
         <section class="bg-card-dark p-6 rounded-xl shadow-lg">
             <h2 class="text-2xl font-semibold mb-4">The Vibes Stream</h2>
-            <!-- Filter/Search Input and Button -->
-            <div class="flex gap-2 mb-4">
+            <!-- Filter/Search Input and Buttons -->
+            <div class="flex flex-col sm:flex-row gap-2 mb-4">
                 <input
                     type="text"
                     id="filter-input"
@@ -129,18 +138,27 @@
                     class="flex-grow p-2 bg-bg-dark text-text-light border border-subtle-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-amber"
                     aria-label="Filter vibes by address or text"
                 >
-                <button
-                    id="apply-filter-btn"
-                    class="bg-subtle-gray text-text-light px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-subtle-gray"
-                >
-                    Filter
-                </button>
-                <button
-                    id="clear-filter-btn"
-                    class="bg-subtle-gray text-text-light px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-subtle-gray"
-                >
-                    Clear
-                </button>
+                <div class="flex gap-2 mt-2 sm:mt-0 flex-col-mobile sm:flex-row">
+                    <button
+                        id="apply-filter-btn"
+                        class="bg-subtle-gray text-text-light px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-subtle-gray"
+                    >
+                        Filter
+                    </button>
+                    <button
+                        id="my-vibes-btn"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled
+                    >
+                        My Vibes
+                    </button>
+                    <button
+                        id="clear-filter-btn"
+                        class="bg-subtle-gray text-text-light px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-subtle-gray"
+                    >
+                        Clear
+                    </button>
+                </div>
             </div>
 
             <!-- Container for dynamically loaded vibe cards -->
@@ -150,8 +168,11 @@
                     Connect your wallet to see the vibes!
                 </p>
             </div>
+            <!-- No Load More button here -->
         </section>
     </main>
+
+    <!-- No Tip Modal here -->
 
     <!-- Link to your JavaScript file -->
     <script src="app.js"></script>
