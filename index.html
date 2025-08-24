@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On-Chain Vibes</title>
+    <!-- Tailwind CSS CDN for quick styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Ethers.js library for Web3 interactions -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script>
+        // Tailwind CSS configuration to extend default theme
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        // Using Inter for a modern, clean look
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        // Custom color palette for the dApp
+                        'bg-dark': '#0A0A0A', // Deep black for background
+                        'card-dark': '#1A1A1A', // Slightly lighter black for cards
+                        'text-light': '#F0F0F0', // Off-white for primary text
+                        'accent-amber': '#FFC107', // Bright amber for interactive elements
+                        'subtle-gray': '#757575', // Dark gray for secondary text and borders
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Apply Inter font globally and ensure a base font size */
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 16px; /* Base font size */
+        }
+
+        /* Custom scrollbar styling for the vibes feed */
+        .overflow-y-auto::-webkit-scrollbar {
+            width: 8px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-track {
+            background: #2D2D2D;
+            border-radius: 10px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+            background: #4A4A4A;
+            border-radius: 10px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+            background: #5A5A5A;
+        }
+
+        /* Responsive adjustments for smaller screens */
+        @media (max-width: 640px) {
+            body {
+                font-size: 14px; /* Slightly smaller font on mobile */
+            }
+            .text-3xl {
+                font-size: 2rem; /* Adjust header size */
+            }
+            .text-2xl {
+                font-size: 1.5rem; /* Adjust section title size */
+            }
+        }
+    </style>
+</head>
+<body class="bg-bg-dark text-text-light min-h-screen flex flex-col items-center p-4">
+
+    <!-- Header section with dApp title and wallet connection -->
+    <header class="w-full max-w-2xl flex justify-between items-center py-4 border-b border-subtle-gray mb-6">
+        <h1 class="text-3xl font-bold">On-Chain Vibes ✨</h1>
+        <div id="wallet-info">
+            <!-- Button to connect wallet, initially visible -->
+            <button id="connect-wallet-btn" class="bg-accent-amber text-bg-dark px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-accent-amber">
+                Connect Wallet
+            </button>
+        </div>
+    </header>
+
+    <!-- Main content area -->
+    <main class="w-full max-w-2xl flex flex-col gap-6">
+        <!-- Section for posting new vibe messages -->
+        <section class="bg-card-dark p-6 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4">Share Your Vibe</h2>
+            <!-- Textarea for user to type their message -->
+            <textarea
+                id="vibe-message"
+                placeholder="What's on your mind? Max 140 characters..."
+                maxlength="140"
+                class="w-full h-24 p-3 bg-bg-dark text-text-light border border-subtle-gray rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-amber mb-3"
+                aria-label="Vibe message input"
+            ></textarea>
+            <div class="flex justify-between items-center">
+                <!-- Character count display -->
+                <span id="char-count" class="text-sm text-subtle-gray">0/140</span>
+                <!-- Button to post the vibe, initially disabled -->
+                <button
+                    id="post-vibe-btn"
+                    class="bg-accent-amber text-bg-dark px-5 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-yellow-600 disabled:bg-subtle-gray disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent-amber"
+                    disabled
+                >
+                    Post Vibe
+                </button>
+            </div>
+        </section>
+
+        <!-- Section for displaying all posted vibes -->
+        <section class="bg-card-dark p-6 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4">The Vibes Stream</h2>
+            <!-- Container for dynamically loaded vibe cards -->
+            <div id="vibes-container" class="space-y-4 max-h-96 overflow-y-auto">
+                <!-- Loading/initial message -->
+                <p class="text-center text-subtle-gray py-4" id="loading-message">
+                    Connect your wallet to see the vibes!
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Link to your JavaScript file -->
+    <script src="app.js"></script>
+</body>
+</html>
