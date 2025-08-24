@@ -6,7 +6,7 @@
     <title>On-Chain Vibes</title>
     <!-- Tailwind CSS CDN for quick styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Ethers.js library for Web3 interactions -->
+    <!-- Ethers.js library for Web3 interactions (Updated CDN) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <script>
         // Tailwind CSS configuration to extend default theme
@@ -50,6 +50,15 @@
         }
         .overflow-y-auto::-webkit-scrollbar-thumb:hover {
             background: #5A5A5A;
+            cursor: pointer; /* Indicate it's interactive, even if just visual */
+        }
+
+        /* Hover effect for vibe cards */
+        .vibe-card:hover {
+            transform: translateY(-2px); /* Slightly lift the card */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); /* Add more pronounced shadow */
+            border-color: var(--accent-amber); /* Highlight border with accent color */
+            transition: all 0.2s ease-in-out; /* Smooth transition for all changes */
         }
 
         /* Responsive adjustments for smaller screens */
@@ -76,6 +85,8 @@
             <button id="connect-wallet-btn" class="bg-accent-amber text-bg-dark px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-accent-amber">
                 Connect Wallet
             </button>
+            <!-- Placeholder for network status -->
+            <span id="network-status" class="text-sm text-subtle-gray ml-2 hidden"></span>
         </div>
     </header>
 

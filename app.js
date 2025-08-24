@@ -101,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const charCountSpan = document.getElementById('char-count');
     const vibesContainer = document.getElementById('vibes-container');
     const loadingMessage = document.getElementById('loading-message');
+    const networkStatusSpan = document.getElementById('network-status'); // New element for network status
 
     // --- Helper Functions ---
 
@@ -130,6 +131,17 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => messageContainer.remove(), 3000); // Remove after 3 seconds
     }
 
+    /**
+     * @dev Updates the displayed network status.
+     * @param {string} networkName The name of the connected network.
+     * @param {string} statusColor Tailwind class for the status color.
+     */
+    function updateNetworkStatus(networkName, statusColor = 'text-subtle-gray') {
+        networkStatusSpan.textContent = `Network: ${networkName}`;
+        networkStatusSpan.className = `text-sm ${statusColor} ml-2`;
+        networkStatusSpan.classList.remove('hidden');
+    }
+
     // --- Web3 Interaction Functions ---
 
     /**
@@ -145,6 +157,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Initialize provider and signer
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 signer = provider.getSigner();
+
+                // Get current network and check if it's Sepolia
+                const network = await provider.getNetwork();
+                const expectedChainId = 11155111; // Sepolia Chain ID
+                if (network.chainId !== expectedChainId) {
+                    showUserMessage(`Please switch your MetaMask to the Sepolia network. Current: ${network.name} (ChainID: ${network.chainId})`, 'error');
+                    updateNetworkStatus(`Wrong Network: ${network.name}`, 'text-red-400');
+                    // Optionally, disable post vibe button until correct network
+                    postVibeBtn.disabled = true;
+                    return; // Stop execution if on wrong network
+                }
 
                 // Initialize the contract instance with the signer for transactions
                 contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
@@ -162,6 +185,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 connectWalletBtn.style.display = 'none'; // Hide connect button
 
+                // Update network status to green
+                updateNetworkStatus(`${network.name}`, 'text-green-400');
+
                 // Enable post vibe button if message is not empty and wallet is connected
                 postVibeBtn.disabled = vibeMessageTextarea.value.length === 0;
 
@@ -172,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.ethereum.on('accountsChanged', (newAccounts) => {
                     if (newAccounts.length === 0) {
                         // User disconnected all accounts
+                        showUserMessage("Wallet disconnected. Please reconnect.", 'info');
                         location.reload(); // Simple reload for now, or more complex state reset
                     } else {
                         userAddress = newAccounts[0];
@@ -182,10 +209,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Add event listener for network changes
                 window.ethereum.on('chainChanged', (chainId) => {
-                    showUserMessage(`Network changed to ${parseInt(chainId, 16)}. Reloading...`, 'info');
+                    const newChainId = parseInt(chainId, 16);
+                    if (newChainId === expectedChainId) {
+                         showUserMessage("Switched to Sepolia network. Reloading...", 'success');
+                    } else {
+                         showUserMessage(`Switched to unsupported network (ChainID: ${newChainId}). Please switch to Sepolia. Reloading...`, 'error');
+                    }
                     location.reload(); // Reload to ensure correct contract instance and network
                 });
-
 
             } catch (error) {
                 console.error("Wallet connection failed:", error);
@@ -195,6 +226,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     showUserMessage("Failed to connect wallet. Please try again.", 'error');
                 }
+                 // Ensure network status shows as disconnected/error
+                updateNetworkStatus("Disconnected", 'text-red-400');
             }
         } else {
             showUserMessage("MetaMask or another Web3 wallet is not detected. Please install one.", 'info');
@@ -205,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     Install MetaMask
                 </a>
             `;
+             updateNetworkStatus("Wallet not detected", 'text-red-400');
         }
     }
 
@@ -264,10 +298,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Only fetch if contract is initialized
         if (!contract) {
             loadingMessage.textContent = "Connect your wallet to load vibes.";
+            loadingMessage.style.display = 'block'; // Ensure it's visible
             return;
         }
 
         loadingMessage.textContent = "Loading vibes...";
+        loadingMessage.style.display = 'block'; // Ensure it's visible while loading
         vibesContainer.innerHTML = ''; // Clear previous vibes
 
         try {
@@ -286,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Reversing the array to show the latest vibes at the top
             allVibes.reverse().forEach(vibe => {
                 const vibeCard = document.createElement('div');
-                vibeCard.className = 'bg-bg-dark p-4 rounded-lg border border-subtle-gray shadow-sm';
+                vibeCard.className = 'vibe-card bg-bg-dark p-4 rounded-lg border border-subtle-gray shadow-sm cursor-pointer'; // Added 'vibe-card' class for hover effect
 
                 // Extract data from the vibe struct (ethers returns it as an array-like object)
                 const message = vibe.message;
@@ -329,18 +365,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Initial Load Logic ---
-    // Attempt to connect automatically if MetaMask is already detected and an account is selected
-    if (typeof window.ethereum !== 'undefined' && window.ethereum.selectedAddress) {
-        connectWallet();
-    } else {
-        // If no wallet detected or connected, still try to fetch vibes (read-only)
-        // This will only work if the contract has public `view` functions that don't need a signer.
-        // For our `getAllVibes`, it needs a provider to read, but `contract` is initialized with a `signer`.
-        // So, initially, `fetchVibes` will show "Connect your wallet..."
-        // If you wanted to fetch read-only data without connecting, `contract` would need to be
-        // initialized with just a provider: `new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider)`
-        // However, given `postVibe` needs `signer`, we keep `contract` initialized with `signer`
-        // which means `connectWallet` must run first.
-        fetchVibes(); // This will display the "Connect your wallet..." message initially.
+    // This will check if MetaMask is already connected and automatically try to establish the connection.
+    // Otherwise, it will just show the initial loading message which prompts to connect.
+    async function initializeDApp() {
+        if (typeof window.ethereum !== 'undefined' && window.ethereum.selectedAddress) {
+            // Attempt to connect automatically if MetaMask is already detected and an account is selected
+            await connectWallet();
+        } else {
+            // If no wallet detected or connected, set an initial message
+            loadingMessage.textContent = "Please connect your wallet to view and post vibes.";
+            loadingMessage.style.display = 'block';
+            updateNetworkStatus("Not Connected", 'text-red-400');
+        }
     }
+
+    initializeDApp();
 });
