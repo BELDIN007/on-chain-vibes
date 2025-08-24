@@ -1,19 +1,125 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log('On-Chain Vibes dApp frontend loaded.');
 
-    // --- Configuration (UPDATE THESE WITH YOUR *ORIGINAL* CONTRACT DETAILS) ---
-    // PASTE YOUR *ORIGINAL* SEPOLIA DEPLOYED CONTRACT ADDRESS HERE
-    const CONTRACT_ADDRESS = "0x4a7e0a1b38527af1dD6C679a3663A6D23F82Fd22"; // REPLACE WITH YOUR ORIGINAL CONTRACT ADDRESS
-    // PASTE YOUR *ORIGINAL* SEPOLIA DEPLOYED CONTRACT ABI HERE
-    const CONTRACT_ABI = [
-        // Your ORIGINAL ABI goes here. It should only have postVibe and getAllVibes.
+    // --- Configuration (UPDATE THESE AFTER DEPLOYING YOUR CONTRACT TO BASE SEPOLIA) ---
+    // PASTE YOUR BASE SEPOLIA DEPLOYED CONTRACT ADDRESS HERE
+    const CONTRACT_ADDRESS = "0x61F73B2186b481860336635F5DB1aef4b81Ce290"; // UPDATED!
+    // PASTE YOUR BASE SEPOLIA DEPLOYED CONTRACT ABI HERE
+    const CONTRACT_ABI = [ // UPDATED!
+        {
+            "inputs": [],
+            "stateMutability": "nonpayable",
+            "type": "constructor"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "poster",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "timestamp",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "string",
+                    "name": "message",
+                    "type": "string"
+                }
+            ],
+            "name": "NewVibe",
+            "type": "event"
+        },
         {
             "inputs": [
-                { "internalType": "string", "name": "_message", "type": "string" }
+                {
+                    "internalType": "string",
+                    "name": "_message",
+                    "type": "string"
+                }
             ],
             "name": "postVibe",
             "outputs": [],
             "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "_vibeIndex",
+                    "type": "uint256"
+                }
+            ],
+            "name": "tipVibe",
+            "outputs": [],
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "tipper",
+                    "type": "address"
+                },
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "poster",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "vibeIndex",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "amount",
+                    "type": "uint256"
+                }
+            ],
+            "name": "VibeTipped",
+            "type": "event"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "name": "allVibes",
+            "outputs": [
+                {
+                    "internalType": "string",
+                    "name": "message",
+                    "type": "string"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "timestamp",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "address",
+                    "name": "poster",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
             "type": "function"
         },
         {
@@ -22,9 +128,21 @@ document.addEventListener('DOMContentLoaded', () => {
             "outputs": [
                 {
                     "components": [
-                        { "internalType": "string", "name": "message", "type": "string" },
-                        { "internalType": "uint256", "name": "timestamp", "type": "uint256" },
-                        { "internalType": "address", "name": "poster", "type": "address" }
+                        {
+                            "internalType": "string",
+                            "name": "message",
+                            "type": "string"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "timestamp",
+                            "type": "uint256"
+                        },
+                        {
+                            "internalType": "address",
+                            "name": "poster",
+                            "type": "address"
+                        }
                     ],
                     "internalType": "struct OnChainVibes.Vibe[]",
                     "name": "",
@@ -35,17 +153,38 @@ document.addEventListener('DOMContentLoaded', () => {
             "type": "function"
         },
         {
-            "anonymous": false,
-            "inputs": [
-                { "indexed": true, "internalType": "address", "name": "poster", "type": "address" },
-                { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" },
-                { "indexed": false, "internalType": "string", "name": "message", "type": "string" }
+            "inputs": [],
+            "name": "vibeCount",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
             ],
-            "name": "NewVibe",
-            "type": "event"
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "name": "vibeToPoster",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
         }
-    ]; // <-- END OF ORIGINAL ABI ARRAY
-
+    ];
 
     // --- Global Variables ---
     let signer = null;
@@ -60,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const charCountSpan = document.getElementById('char-count');
     const vibesContainer = document.getElementById('vibes-container');
     const loadingMessage = document.getElementById('loading-message');
-    const networkStatusSpan = document.getElementById('network-status');
+    const networkStatusSpan = document.getElementById('network-status'); // Already in HTML but not in JS, adding it here.
 
     // Filter elements
     const filterInput = document.getElementById('filter-input');
@@ -114,13 +253,13 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * @dev Resolves an Ethereum address to an ENS name if available, otherwise returns a shortened address.
      * NOTE: ENS resolution is often not supported on testnets by default RPCs,
-     * so for Sepolia, we will simply return the shortened address to prevent errors.
+     * so for Base Sepolia, we will simply return the shortened address to prevent errors.
      * @param {string} address The Ethereum address.
      * @returns {Promise<string>} The shortened address (ENS lookup bypassed for Sepolia).
      */
     async function resolveEnsName(address) {
         if (!provider || !address) return shortenAddress(address);
-        // Temporarily disable ENS lookup for Sepolia to prevent "network does not support ENS" errors.
+        // Temporarily disable ENS lookup for testnets to prevent "network does not support ENS" errors.
         return shortenAddress(address);
     }
 
@@ -179,12 +318,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 signer = provider.getSigner();
 
                 const network = await provider.getNetwork();
-                const expectedChainId = 11155111; // Sepolia Chain ID
+                const expectedChainId = 84532; // Base Sepolia Chain ID
                 if (network.chainId !== expectedChainId) {
-                    showUserMessage(`Please switch your MetaMask to the Sepolia network. Current: ${network.name} (ChainID: ${network.chainId})`, 'error');
+                    showUserMessage(`Please switch your MetaMask to the Base Sepolia network. Current: ${network.name} (ChainID: ${network.chainId})`, 'error');
                     updateNetworkStatus(`Wrong Network: ${network.name}`, 'text-red-400');
                     postVibeBtn.disabled = true;
-                    myVibesBtn.disabled = true;
+                    myVibesBtn.disabled = true; // Ensure filter button is disabled too
                     return;
                 }
 
@@ -226,9 +365,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.ethereum.on('chainChanged', (chainId) => {
                     const newChainId = parseInt(chainId, 16);
                     if (newChainId === expectedChainId) {
-                         showUserMessage("Switched to Sepolia network. Reloading...", 'success');
+                         showUserMessage("Switched to Base Sepolia network. Reloading...", 'success');
                     } else {
-                         showUserMessage(`Switched to unsupported network (ChainID: ${newChainId}). Please switch to Sepolia. Reloading...`, 'error');
+                         showUserMessage(`Switched to unsupported network (ChainID: ${newChainId}). Please switch to Base Sepolia. Reloading...`, 'error');
                     }
                     location.reload();
                 });
@@ -297,6 +436,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * @dev Sends a tip to the poster of a specific vibe.
+     * @param {number} vibeIndex The index of the vibe to tip.
+     * @param {string} posterAddress The address of the vibe poster.
+     */
+    async function tipVibe(vibeIndex, posterAddress) {
+        if (!contract || !signer || !userAddress) {
+            showUserMessage("Please connect your wallet to send a tip.", 'info');
+            return;
+        }
+
+        if (userAddress.toLowerCase() === posterAddress.toLowerCase()) {
+            showUserMessage("You cannot tip yourself!", 'info');
+            return;
+        }
+
+        const tipAmountEth = prompt("Enter tip amount in ETH (e.g., 0.001):");
+        if (!tipAmountEth || isNaN(tipAmountEth) || parseFloat(tipAmountEth) <= 0) {
+            showUserMessage("Invalid tip amount.", 'error');
+            return;
+        }
+
+        try {
+            const tipAmountWei = ethers.utils.parseEther(tipAmountEth); // Convert ETH to Wei
+            
+            showUserMessage(`Sending ${tipAmountEth} ETH tip to ${shortenAddress(posterAddress)}...`, 'info');
+
+            // Call the tipVibe function, specifying the value (ETH) to send
+            const transaction = await contract.tipVibe(vibeIndex, { value: tipAmountWei });
+            
+            showUserMessage("Tip transaction sent! Waiting for confirmation...", 'info');
+            await transaction.wait();
+            showUserMessage(`Successfully tipped ${tipAmountEth} ETH!`, 'success');
+
+            fetchVibes(); // Refresh vibes to potentially show updated state (e.g., if we later add tip counts)
+
+        } catch (error) {
+            console.error("Failed to send tip:", error);
+            if (error.code === 4001) {
+                showUserMessage("Tip transaction rejected by user.", 'info');
+            } else if (error.data && error.data.message) {
+                showUserMessage(`Tip failed: ${error.data.message.split('execution reverted: ')[1] || error.data.message}`, 'error');
+            } else {
+                showUserMessage("Failed to send tip. See console for details.", 'error');
+            }
+        }
+    }
+
+    /**
      * @dev Fetches all vibe messages from the blockchain and dynamically displays them in the UI.
      * @param {string} [filterTerm=''] Optional term to filter vibes by (address or text).
      * @param {'all' | 'myVibes'} [filterType='all'] Specifies if filtering by current user's vibes.
@@ -351,30 +538,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Create and append a card for each displayed vibe
             // Reversing the array to show the latest vibes at the top
-            displayedVibes.reverse().forEach(async vibe => {
+            displayedVibes.reverse().forEach((vibe, index) => { // Added index here
                 const vibeCard = document.createElement('div');
+                // Added vibe-card class for hover effects
                 vibeCard.className = 'vibe-card bg-light-card dark:bg-card-dark p-4 rounded-lg border border-light-subtle-gray dark:border-subtle-gray shadow-sm';
 
                 const message = vibe.message;
                 const timestamp = vibe.timestamp.toNumber();
                 const poster = vibe.poster;
+                // The contract's allVibes array is zero-indexed.
+                // When we reverse `displayedVibes`, the index `allVibes.length - 1 - index` will map
+                // to the original on-chain index.
+                const originalVibeIndex = allVibes.length - 1 - index;
 
-                const resolvedPoster = await resolveEnsName(poster); // Will return shortened address on Sepolia
+
+                const resolvedPoster = poster; // ENS lookup bypassed for now for simplicity
                 const formattedDate = new Date(timestamp * 1000).toLocaleString();
 
                 vibeCard.innerHTML = `
                     <p class="text-light-text dark:text-text-light text-lg mb-2 break-words">${message}</p>
-                    <div class="flex justify-between text-sm text-light-subtle-gray dark:text-subtle-gray">
-                        <span>By: <span class="font-mono text-accent-amber">${resolvedPoster}</span></span>
+                    <div class="flex justify-between items-center text-sm text-light-subtle-gray dark:text-subtle-gray mt-2">
+                        <span>By: <span class="font-mono text-accent-amber">${shortenAddress(resolvedPoster)}</span></span>
+                        <button class="tip-btn bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold hover:bg-blue-700 transition-colors"
+                                data-vibe-index="${originalVibeIndex}"
+                                data-poster-address="${poster}"
+                                ${userAddress && userAddress.toLowerCase() === poster.toLowerCase() ? 'disabled' : ''}
+                                >
+                                Tip 🎁
+                        </button>
                         <span>${formattedDate}</span>
                     </div>
                 `;
                 vibesContainer.appendChild(vibeCard);
             });
+            // Add event listeners to all tip buttons after they are rendered
+            document.querySelectorAll('.tip-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const vibeIndex = parseInt(event.target.dataset.vibeIndex);
+                    const posterAddress = event.target.dataset.posterAddress;
+                    tipVibe(vibeIndex, posterAddress);
+                });
+            });
+
         } catch (error) {
             console.error("Failed to fetch vibes:", error);
             loadingMessage.style.display = 'block';
-            loadingMessage.textContent = "Error loading vibes. Please ensure your wallet is connected to Sepolia and try again.";
+            loadingMessage.textContent = "Error loading vibes. Please ensure your wallet is connected to Base Sepolia and try again.";
         }
     }
 
