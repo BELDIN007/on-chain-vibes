@@ -128,6 +128,33 @@
     <!-- Main content area -->
     <main class="w-full max-w-2xl flex flex-col gap-6">
 
+        <!-- New: Section for User Profile (Username) -->
+        <section class="bg-light-card dark:bg-dark-card p-6 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4">Your Profile</h2>
+            <div id="user-profile-info" class="mb-4 text-light-text dark:text-dark-text">
+                <p>Wallet: <span id="display-wallet-address" class="font-mono text-base-blue">Not Connected</span></p>
+                <p>Username: <span id="display-username" class="font-semibold text-base-blue">None Set</span></p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <input
+                    type="text"
+                    id="username-input"
+                    placeholder="Set your unique username (3-20 chars)"
+                    maxlength="20"
+                    class="flex-grow p-2 bg-light-subtle/50 dark:bg-dark-subtle/50 text-light-text dark:text-dark-text border border-light-subtle dark:border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-base-blue"
+                    aria-label="Username input"
+                >
+                <button
+                    id="set-username-btn"
+                    class="bg-base-blue text-white px-5 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-blue-700 disabled:bg-light-subtle dark:disabled:bg-dark-subtle disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-base-blue"
+                    disabled
+                >
+                    Set Username
+                </button>
+            </div>
+        </section>
+
+
         <!-- Section for posting new vibe messages -->
         <section class="bg-light-card dark:bg-dark-card p-6 rounded-xl shadow-lg">
             <h2 class="text-2xl font-semibold mb-4">Share Your Vibe</h2>
@@ -197,6 +224,39 @@
             </div>
         </section>
     </main>
+
+    <!-- Tip Modal -->
+    <div id="tip-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-dark-card p-6 rounded-xl shadow-lg w-full max-w-sm">
+            <h3 class="text-xl font-semibold mb-4 text-dark-text">Send a Tip</h3>
+            <p class="text-dark-subtle mb-2">Tipping vibe by: <span id="tip-poster-address" class="font-mono"></span></p>
+            <input
+                type="number"
+                id="tip-amount-input"
+                placeholder="Amount in ETH (e.g., 0.01)"
+                step="0.0001"
+                min="0.0001"
+                class="w-full p-2 bg-dark-subtle/50 text-dark-text border border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-base-blue mb-4"
+                aria-label="Tip amount in ETH"
+            >
+            <div class="flex justify-end gap-3">
+                <button
+                    id="cancel-tip-btn"
+                    class="bg-dark-subtle text-dark-text px-4 py-2 rounded-lg font-semibold transition-colors hover:bg-dark-subtle/70"
+                >
+                    Cancel
+                </button>
+                <button
+                    id="confirm-tip-btn"
+                    class="bg-base-blue text-white px-4 py-2 rounded-lg font-semibold transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled
+                >
+                    Confirm Tip
+                </button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Link to your JavaScript file -->
     <script src="app.js"></script>

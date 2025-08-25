@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Configuration (UPDATE THESE AFTER DEPLOYING YOUR CONTRACT TO BASE SEPOLIA) ---
     // PASTE YOUR BASE SEPOLIA DEPLOYED CONTRACT ADDRESS HERE
-    const CONTRACT_ADDRESS = "0x61F73B2186b481860336635F5DB1aef4b81Ce290"; // UPDATED!
+    const CONTRACT_ADDRESS = "0x5A48f90245fd52A04E4C814a782035759f3a5b86"; // UPDATED!
     // PASTE YOUR BASE SEPOLIA DEPLOYED CONTRACT ABI HERE
     const CONTRACT_ABI = [ // UPDATED!
         {
@@ -52,6 +52,19 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             "inputs": [
                 {
+                    "internalType": "string",
+                    "name": "_username",
+                    "type": "string"
+                }
+            ],
+            "name": "setUsername",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
                     "internalType": "uint256",
                     "name": "_vibeIndex",
                     "type": "uint256"
@@ -61,6 +74,25 @@ document.addEventListener('DOMContentLoaded', () => {
             "outputs": [],
             "stateMutability": "payable",
             "type": "function"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "user",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "string",
+                    "name": "newUsername",
+                    "type": "string"
+                }
+            ],
+            "name": "UsernameSet",
+            "type": "event"
         },
         {
             "anonymous": false,
@@ -92,6 +124,25 @@ document.addEventListener('DOMContentLoaded', () => {
             ],
             "name": "VibeTipped",
             "type": "event"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "name": "addressToUsername",
+            "outputs": [
+                {
+                    "internalType": "string",
+                    "name": "",
+                    "type": "string"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
         },
         {
             "inputs": [
@@ -153,6 +204,44 @@ document.addEventListener('DOMContentLoaded', () => {
             "type": "function"
         },
         {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_userAddress",
+                    "type": "address"
+                }
+            ],
+            "name": "getUsername",
+            "outputs": [
+                {
+                    "internalType": "string",
+                    "name": "",
+                    "type": "string"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "string",
+                    "name": "",
+                    "type": "string"
+                }
+            ],
+            "name": "usernameToAddress",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
             "inputs": [],
             "name": "vibeCount",
             "outputs": [
@@ -191,6 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let provider = null;
     let contract = null;
     let userAddress = null; // Connected wallet address
+    let currentUsername = null; // Store the user's current username
 
     // --- DOM Elements ---
     const connectWalletBtn = document.getElementById('connect-wallet-btn');
@@ -199,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const charCountSpan = document.getElementById('char-count');
     const vibesContainer = document.getElementById('vibes-container');
     const loadingMessage = document.getElementById('loading-message');
-    const networkStatusSpan = document.getElementById('network-status'); // Already in HTML but not in JS, adding it here.
+    const networkStatusSpan = document.getElementById('network-status');
 
     // Filter elements
     const filterInput = document.getElementById('filter-input');
@@ -209,6 +299,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Theme toggle element
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
+
+    // New Username elements
+    const usernameInput = document.getElementById('username-input');
+    const setUsernameBtn = document.getElementById('set-username-btn');
+    const displayWalletAddressSpan = document.getElementById('display-wallet-address');
+    const displayUsernameSpan = document.getElementById('display-username');
+
+    // Tip Modal elements
+    const tipModal = document.getElementById('tip-modal');
+    const tipPosterAddressSpan = document.getElementById('tip-poster-address');
+    const tipAmountInput = document.getElementById('tip-amount-input');
+    const cancelTipBtn = document.getElementById('cancel-tip-btn');
+    const confirmTipBtn = document.getElementById('confirm-tip-btn');
+
+    let currentTipVibeIndex = -1; // Stores the contract index of the vibe being tipped
 
 
     // --- Helper Functions ---
@@ -251,15 +356,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * @dev Resolves an Ethereum address to an ENS name if available, otherwise returns a shortened address.
-     * NOTE: ENS resolution is often not supported on testnets by default RPCs,
-     * so for Base Sepolia, we will simply return the shortened address to prevent errors.
+     * @dev Resolves an Ethereum address to its on-chain username if available, otherwise returns a shortened address.
      * @param {string} address The Ethereum address.
-     * @returns {Promise<string>} The shortened address (ENS lookup bypassed for Sepolia).
+     * @returns {Promise<string>} The username or shortened address.
      */
-    async function resolveEnsName(address) {
-        if (!provider || !address) return shortenAddress(address);
-        // Temporarily disable ENS lookup for testnets to prevent "network does not support ENS" errors.
+    async function resolveDisplayName(address) {
+        if (!contract || !address) return shortenAddress(address);
+        try {
+            const username = await contract.getUsername(address);
+            if (username && username.length > 0) {
+                return username;
+            }
+        } catch (error) {
+            console.warn("Failed to get username for", address, error);
+            // Fallback to shortened address if contract call fails or no username
+        }
         return shortenAddress(address);
     }
 
@@ -323,22 +434,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     showUserMessage(`Please switch your MetaMask to the Base Sepolia network. Current: ${network.name} (ChainID: ${network.chainId})`, 'error');
                     updateNetworkStatus(`Wrong Network: ${network.name}`, 'text-red-400');
                     postVibeBtn.disabled = true;
-                    myVibesBtn.disabled = true; // Ensure filter button is disabled too
+                    myVibesBtn.disabled = true;
+                    setUsernameBtn.disabled = true; // Disable username button on wrong network
                     return;
                 }
 
                 // Initialize the contract instance with the signer for transactions
                 contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
+                // Fetch user's username immediately after connecting
+                currentUsername = await contract.getUsername(userAddress);
+                displayUsernameSpan.textContent = currentUsername || "None Set";
+
                 // Update UI to show connected state
                 const walletInfo = document.getElementById('wallet-info');
                 walletInfo.innerHTML = `
-                    <div class="flex items-center space-x-2 bg-card-dark px-4 py-2 rounded-lg shadow-md">
+                    <div class="flex items-center space-x-2 bg-dark-card px-4 py-2 rounded-lg shadow-md">
                         <span class="relative flex h-3 w-3">
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                             <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
                         </span>
-                        <span class="text-sm font-semibold text-text-light">${shortenAddress(userAddress)}</span>
+                        <span class="text-sm font-semibold text-dark-text">${shortenAddress(userAddress)}</span>
                     </div>
                 `;
                 connectWalletBtn.style.display = 'none';
@@ -347,6 +463,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 postVibeBtn.disabled = vibeMessageTextarea.value.length === 0;
                 myVibesBtn.disabled = false; // Enable "My Vibes" button when connected
+                displayWalletAddressSpan.textContent = shortenAddress(userAddress); // Update profile wallet address
+                setUsernameBtn.disabled = usernameInput.value.length < 3 || usernameInput.value.length > 20; // Enable username button if valid input
 
                 showUserMessage("Wallet connected!", 'success');
                 fetchVibes(); // Fetch and display all vibes after successful connection
@@ -381,17 +499,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 updateNetworkStatus("Disconnected", 'text-red-400');
                 myVibesBtn.disabled = true;
+                setUsernameBtn.disabled = true; // Disable username button on connection failure
+                displayWalletAddressSpan.textContent = "Not Connected";
+                displayUsernameSpan.textContent = "None Set";
             }
         } else {
             showUserMessage("MetaMask or another Web3 wallet is not detected. Please install one.", 'info');
             connectWalletBtn.innerHTML = `
                 <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer"
-                   class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                   class="bg-base-blue text-white px-4 py-2 rounded-lg font-semibold shadow-md transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-base-blue">
                     Install MetaMask
                 </a>
             `;
             updateNetworkStatus("Wallet not detected", 'text-red-400');
             myVibesBtn.disabled = true;
+            setUsernameBtn.disabled = true; // Disable username button if no wallet detected
+            displayWalletAddressSpan.textContent = "Not Connected";
+            displayUsernameSpan.textContent = "None Set";
         }
     }
 
@@ -451,13 +575,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const tipAmountEth = prompt("Enter tip amount in ETH (e.g., 0.001):");
-        if (!tipAmountEth || isNaN(tipAmountEth) || parseFloat(tipAmountEth) <= 0) {
-            showUserMessage("Invalid tip amount.", 'error');
-            return;
-        }
+        // The prompt is replaced by the modal for a better UX
+        // const tipAmountEth = prompt("Enter tip amount in ETH (e.g., 0.001):");
+        // if (!tipAmountEth || isNaN(tipAmountEth) || parseFloat(tipAmountEth) <= 0) {
+        //     showUserMessage("Invalid tip amount.", 'error');
+        //     return;
+        // }
 
         try {
+            const tipAmountEth = tipAmountInput.value;
             const tipAmountWei = ethers.utils.parseEther(tipAmountEth); // Convert ETH to Wei
             
             showUserMessage(`Sending ${tipAmountEth} ETH tip to ${shortenAddress(posterAddress)}...`, 'info');
@@ -468,6 +594,10 @@ document.addEventListener('DOMContentLoaded', () => {
             showUserMessage("Tip transaction sent! Waiting for confirmation...", 'info');
             await transaction.wait();
             showUserMessage(`Successfully tipped ${tipAmountEth} ETH!`, 'success');
+
+            tipModal.classList.add('hidden'); // Hide modal after successful tip
+            tipAmountInput.value = ''; // Clear input
+            currentTipVibeIndex = -1; // Reset
 
             fetchVibes(); // Refresh vibes to potentially show updated state (e.g., if we later add tip counts)
 
@@ -480,6 +610,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 showUserMessage("Failed to send tip. See console for details.", 'error');
             }
+        } finally {
+            // Re-enable the confirm tip button if modal is still open (e.g., if error happened before hiding)
+            confirmTipBtn.disabled = parseFloat(tipAmountInput.value) <= 0;
         }
     }
 
@@ -538,28 +671,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Create and append a card for each displayed vibe
             // Reversing the array to show the latest vibes at the top
-            displayedVibes.reverse().forEach((vibe, index) => { // Added index here
+            for (let i = displayedVibes.length - 1; i >= 0; i--) {
+                const vibe = displayedVibes[i];
                 const vibeCard = document.createElement('div');
-                // Added vibe-card class for hover effects
-                vibeCard.className = 'vibe-card bg-light-card dark:bg-card-dark p-4 rounded-lg border border-light-subtle-gray dark:border-subtle-gray shadow-sm';
+                vibeCard.className = 'vibe-card p-4 rounded-lg shadow-sm ' +
+                                    'bg-light-card dark:bg-dark-card ' +
+                                    'border border-light-subtle dark:border-dark-subtle';
 
                 const message = vibe.message;
                 const timestamp = vibe.timestamp.toNumber();
                 const poster = vibe.poster;
                 // The contract's allVibes array is zero-indexed.
-                // When we reverse `displayedVibes`, the index `allVibes.length - 1 - index` will map
-                // to the original on-chain index.
-                const originalVibeIndex = allVibes.length - 1 - index;
+                // We need the original index for tipping, not the index in the *displayedVibes* array.
+                // Since `allVibes` is fetched in reverse, `allVibes.length - 1 - i` gives the original contract index.
+                const originalVibeIndex = allVibes.length - 1 - (displayedVibes.length - 1 - i);
 
 
-                const resolvedPoster = poster; // ENS lookup bypassed for now for simplicity
+                const resolvedDisplayName = await resolveDisplayName(poster); // Use the new function
                 const formattedDate = new Date(timestamp * 1000).toLocaleString();
 
                 vibeCard.innerHTML = `
-                    <p class="text-light-text dark:text-text-light text-lg mb-2 break-words">${message}</p>
-                    <div class="flex justify-between items-center text-sm text-light-subtle-gray dark:text-subtle-gray mt-2">
-                        <span>By: <span class="font-mono text-accent-amber">${shortenAddress(resolvedPoster)}</span></span>
-                        <button class="tip-btn bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold hover:bg-blue-700 transition-colors"
+                    <p class="text-light-text dark:text-dark-text text-lg mb-2 break-words">${message}</p>
+                    <div class="flex justify-between items-center text-sm text-light-subtle dark:text-dark-subtle mt-2">
+                        <span>By: <span class="font-semibold text-base-blue">${resolvedDisplayName}</span></span>
+                        <button class="tip-btn bg-base-blue text-white px-3 py-1 rounded-full text-xs font-semibold hover:bg-blue-700 transition-colors"
                                 data-vibe-index="${originalVibeIndex}"
                                 data-poster-address="${poster}"
                                 ${userAddress && userAddress.toLowerCase() === poster.toLowerCase() ? 'disabled' : ''}
@@ -570,13 +705,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
                 vibesContainer.appendChild(vibeCard);
-            });
+            };
+
             // Add event listeners to all tip buttons after they are rendered
             document.querySelectorAll('.tip-btn').forEach(button => {
                 button.addEventListener('click', (event) => {
-                    const vibeIndex = parseInt(event.target.dataset.vibeIndex);
+                    // Open the tip modal instead of the prompt
+                    currentTipVibeIndex = parseInt(event.target.dataset.vibeIndex);
                     const posterAddress = event.target.dataset.posterAddress;
-                    tipVibe(vibeIndex, posterAddress);
+
+                    if (!userAddress || userAddress.toLowerCase() === posterAddress.toLowerCase()) {
+                        showUserMessage("You cannot tip your own vibe.", 'info');
+                        event.target.disabled = true; // Permanently disable if it's their own vibe
+                        return;
+                    }
+
+                    tipPosterAddressSpan.textContent = shortenAddress(posterAddress);
+                    tipAmountInput.value = ''; // Clear previous input
+                    tipModal.classList.remove('hidden');
+                    confirmTipBtn.disabled = true; // Disable until amount is entered
                 });
             });
 
@@ -587,15 +734,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /**
+     * @dev Sets the user's username on the blockchain.
+     */
+    async function setUsername() {
+        const username = usernameInput.value.trim();
+        if (!username || !contract || !signer) {
+            showUserMessage("Please connect your wallet and enter a valid username.", 'info');
+            return;
+        }
+
+        setUsernameBtn.disabled = true;
+        const originalBtnText = setUsernameBtn.textContent;
+        setUsernameBtn.textContent = "Setting...";
+
+        try {
+            const transaction = await contract.setUsername(username);
+            showUserMessage("Username transaction sent! Waiting for confirmation...", 'info');
+            await transaction.wait();
+            showUserMessage("Username set successfully!", 'success');
+            
+            currentUsername = username; // Update local state
+            displayUsernameSpan.textContent = currentUsername; // Update UI
+            usernameInput.value = ''; // Clear input field
+            setUsernameBtn.disabled = true; // Disable after successful set
+
+            // Refresh vibes to display new usernames
+            fetchVibes();
+
+        } catch (error) {
+            console.error("Failed to set username:", error);
+            if (error.code === 4001) {
+                showUserMessage("Transaction rejected by user.", 'info');
+            } else if (error.data && error.data.message) {
+                showUserMessage(`Username failed: ${error.data.message.split('execution reverted: ')[1] || error.data.message}`, 'error');
+            } else {
+                showUserMessage("Failed to set username. See console for details.", 'error');
+            }
+        } finally {
+            setUsernameBtn.textContent = originalBtnText;
+            setUsernameBtn.disabled = usernameInput.value.length < 3 || usernameInput.value.length > 20 || !signer;
+        }
+    }
+
+
     // --- Event Listeners ---
 
     connectWalletBtn.addEventListener('click', connectWallet);
     postVibeBtn.addEventListener('click', postVibe);
+    setUsernameBtn.addEventListener('click', setUsername); // New event listener
 
     vibeMessageTextarea.addEventListener('input', () => {
         const charCount = vibeMessageTextarea.value.length;
         charCountSpan.textContent = `${charCount}/140`;
         postVibeBtn.disabled = charCount === 0 || !signer;
+    });
+
+    usernameInput.addEventListener('input', () => {
+        const usernameLength = usernameInput.value.trim().length;
+        setUsernameBtn.disabled = usernameLength < 3 || usernameLength > 20 || !signer;
     });
 
     applyFilterBtn.addEventListener('click', () => {
@@ -624,6 +821,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     themeToggleBtn.addEventListener('click', toggleTheme);
 
+    // Tip Modal Listeners
+    cancelTipBtn.addEventListener('click', () => {
+        tipModal.classList.add('hidden');
+        tipAmountInput.value = '';
+        currentTipVibeIndex = -1;
+    });
+
+    tipAmountInput.addEventListener('input', () => {
+        confirmTipBtn.disabled = parseFloat(tipAmountInput.value) <= 0;
+    });
+
+    confirmTipBtn.addEventListener('click', () => {
+        if (currentTipVibeIndex !== -1 && userAddress) { // Ensure vibe index and user address are set
+            // The posterAddress is stored in the data-poster-address attribute of the original tip button
+            // but for the modal, we rely on the contract index and `vibeToPoster` mapping if needed,
+            // or we could pass it from the initial click. For now, we trust the `currentTipVibeIndex`.
+            // We just need the actual poster's address, which `tipVibe` will resolve.
+            tipVibe(currentTipVibeIndex, tipPosterAddressSpan.textContent); // Pass the shortened address for display purposes, actual address will be validated by contract
+        } else {
+            showUserMessage("Error: Could not process tip. Please try again.", 'error');
+        }
+    });
+
 
     // --- Initial Load Logic ---
     async function initializeDApp() {
@@ -636,6 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingMessage.style.display = 'block';
             updateNetworkStatus("Not Connected", 'text-red-400');
             myVibesBtn.disabled = true;
+            setUsernameBtn.disabled = true; // Disable username button initially
         }
     }
 
